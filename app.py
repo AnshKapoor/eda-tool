@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
 
-from pandas_profiling import ProfileReport
-from streamlit_pandas_profiling import st_profile_report
+# from pandas_profiling import ProfileReport
+# from streamlit_pandas_profiling import st_profile_report
 
 def main():
     # Page layout
@@ -14,12 +14,13 @@ def main():
     st.set_option("deprecation.showPyplotGlobalUse", False)
 
     # Main title
-    st.title("Exploratory Data Analysis (EDA) Tool 📈")
+    st.header("EDA")
+    st.title("Exploratory Data Analysis (EDA) Tool")
     st.sidebar.title("Exploratory Data Analysis (EDA) Tool 📈")
-    st.markdown("### By [Richard Cornelius Suwandi](https://github.com/richardcsuwandi)")
+    st.markdown("### By [Ansh Kapoor](https://github.com/AnshKapoor)")
     st.sidebar.markdown("By [Richard Cornelius Suwandi](https://github.com/richardcsuwandi)")
     st.sidebar.markdown("[![View on GitHub](https://img.shields.io/badge/GitHub-View_on_GitHub-blue?logo=GitHub)](https://github.com/richardcsuwandi/eda-tool)")
-
+    st.sidebar.markdown("## Choose a theme")
     # App description
     st.markdown("### An exploratory analysis tool that provides various summaries and visualizations on the uploaded data.")
 
@@ -66,6 +67,43 @@ def main():
                 col = st.sidebar.selectbox("Choose a column", df.columns)
                 st.subheader(f"{col}'s Unique Values")
                 st.write(df[col].value_counts())
+            
+            # Handle Missing Values
+            if st.sidebar.checkbox("Handle Missing Values"):
+                method = st.sidebar.radio("Fill or Drop?", ["Fill", "Drop"])
+                if method == "Fill":
+                    detailed_output = []
+                    fill_value = st.sidebar.text_input("Fill value or method (mean/median)", "mean")
+                    if fill_value in ["mean", "median"]:
+                        fill_values = df.mean() if fill_value == "mean" else df.median()
+                        for col in df.columns:
+                            if col in fill_values:
+                                missing_indices = df[df[col].isna()].index
+                                for i in missing_indices:
+                                    detailed_output.append(f"The missing value at index {i} in column '{col}' was replaced with {fill_values[col]:.2f}.")
+                                df[col] = df[col].fillna(fill_values[col])
+                        st.write(df)
+                        
+                    else:
+                        for col in df.columns:
+                            missing_indices = df[df[col].isna()].index
+                            for i in missing_indices:
+                                detailed_output.append(f"The missing value at index {i} in column '{col}' was replaced with '{fill_value}'.")
+                            df = df.fillna(fill_value)
+                            st.write(df)
+                    for message in detailed_output:
+                        st.text(message)
+
+                else:
+                    missing_indices = df[df.isna().any(axis=1)].index
+                    detailed_output = []
+                    for i in missing_indices:
+                        detailed_output.append(f"Row at index {i} with missing values was dropped.")
+                    df = df.dropna()
+                    st.write(df)
+                    for message in detailed_output:
+                        st.text(message)
+                st.write(df.isnull().sum())
 
         elif activity == "Data Visualizations":
             # Relation plot
@@ -129,10 +167,6 @@ def main():
                 hue = st.sidebar.selectbox("Hue (Optional)", categorical_col.insert(0, None))
                 sns.pairplot(df, hue=hue)
                 st.pyplot()
-
-        elif activity == "Pandas Profiling":
-            pr = ProfileReport(df, explorative=True)
-            st_profile_report(pr)
 
 if __name__ == "__main__":
     main()
